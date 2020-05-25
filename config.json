@@ -1,5 +1,6 @@
 {
     "BOT_NAME": "turnip-bot",
     "GUILD_NAME": "MyServer",
-    "CHANNEL_NAME": "acnh-turnips"
+    "CHANNEL_NAME": "acnh-turnips",
+    "TIMEZONE": "America/Chicago"
 }
