@@ -9,15 +9,14 @@ try:
     with open(config_fpath, 'r') as f:
         data = json.load(f)
         BOT_NAME = data['BOT_NAME']
-        GUILD_NAME = data['GUILD']
-        CHANNEL_NAME = data['CHANNEL']
+        GUILD_NAME = data['GUILD_NAME']
+        CHANNEL_NAME = data['CHANNEL_NAME']
 except KeyError as err:
-    print('Unable to find all config keys, make sure {} still has all keys.\nPrinting error...\n{}'.format(config_fname, err)
-except Exception as err:)
-    print('Unable to load config, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(config_fname, err))
+    print('Unable to find all config keys, make sure {} still has all keys.\nPrinting error...\n{}'.format(config_name, err))
+except Exception as err:
+    print('Unable to load config, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(config_name, err))
 
 #Load secrets.json
-load_secrets()
 secrets_path = os.path.abspath(os.path.dirname(__file__))
 secrets_name = 'secrets.json'
 secrets_fpath = os.path.join(secrets_path, secrets_name)
@@ -28,12 +27,12 @@ except Exception as err:
     print('Unable to load secrets, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(secrets_name, err))
 
 #Discord client and events
-self.client = discord.Client()
+client = discord.Client()
 
 @client.event
 async def on_ready():
     guild = None
-    for g in client.guilds():
+    for g in client.guilds:
         if g.name == GUILD_NAME:
             guild = g
             break
