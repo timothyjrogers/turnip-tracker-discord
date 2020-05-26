@@ -29,7 +29,8 @@ except Exception as err:
 #Utility functions
 def get_data_time():
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
-    day_of_week = now.weekday() + 1 if now.weekday() != 6 else 0
+    weekday_to_index = {6: 0, 0: 1, 1: 3, 2: 5, 3: 7, 4: 9, 5: 11}
+    day_of_week = weekday_to_index[now.weekday()]
     am_or_pm = 0 if now.hour < 12 else 1
     return day_of_week + am_or_pm if day_of_week != 0 else day_of_week
 
