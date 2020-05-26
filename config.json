@@ -1,6 +1,9 @@
 {
     "BOT_NAME": "turnip-bot",
-    "GUILD_NAME": "Tim&Company",
+    "GUILD_NAME": "MyServer",
     "CHANNEL_NAME": "acnh-turnips",
-    "TIMEZONE": "America/Chicago"
+    "TIMEZONE": "America/Chicago",
+    "ENABLE_SUNDAY_REMINDER": "False",
+    "ENABLE_AM_REMINDER": "False",
+    "ENABLE_PM_REMINDER": "False"
 }

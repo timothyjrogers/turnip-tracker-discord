@@ -72,7 +72,7 @@ async def on_ready():
         if g.name == config['GUILD_NAME']:
             guild = g
             break
-    print('Bot user {} has connected to Server/Channel {}\nThe bot will communicate in channel {}'.format(client.user, guild.name, config['CHANNEL_NAME']))
+    print('Bot user {} has connected to Server {}\nThe bot will communicate in channel {}'.format(client.user, guild.name, config['CHANNEL_NAME']))
     channel = None
     for c in guild.channels:
         if c.name == config['CHANNEL_NAME']:
@@ -164,7 +164,7 @@ async def reminder_to_buy():
             channel = c
             break
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
-    if now.weekday() == 0:
+    if now.weekday() == 6:
         await channel.send('@everyone Don\'t forget to buy your turnips!')
 
 @reminder_to_buy.before_loop
@@ -173,9 +173,73 @@ async def reminder_to_buy_before():
     print('Registering reminder_to_buy task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
     now = datetime.datetime.now()
-    next_day = (now + delta).replace(microsecond=0, second=0, minute=0, hour=0)
-    wait_seconds = (next_day - now).seconds
+    next_5AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=5)
+    wait_seconds = (next_5AM - now).seconds
     print ('Time until reminder_to_buy first runs: {} s'.format(wait_seconds))
+    await asyncio.sleep(wait_seconds)
+
+@tasks.loop(hours=24)
+async def am_reminder_to_sell():
+    #Get appropriate channel for replies
+    print('Sending AM reminder to sell to {}'.format(config['CHANNEL_NAME']))
+    guild = None
+    for g in client.guilds:
+        if g.name == config['GUILD_NAME']:
+            guild = g
+            break
+    channel = None
+    for c in guild.channels:
+        if c.name == config['CHANNEL_NAME']:
+            channel = c
+            break
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
+    if now.weekday() != 6:
+        await channel.send('@everyone Don\'t forget to check morning turnip prices!')
+
+@am_reminder_to_sell.before_loop
+async def am_reminder_to_sell_before():
+    await client.wait_until_ready()
+    print('Registering am_reminder_to_sell task. Waiting until next 8AM to begin schedule...')
+    now = datetime.datetime.now()
+    if now.hour < 8:
+        wait_seconds = (now.replace(hour=8) - now).seconds
+    else:
+        delta = datetime.timedelta(days=1)
+        next_8AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=8)
+        wait_seconds = (next_8AM - now).seconds
+    print ('Time until am_reminder_to_sell first runs: {} s'.format(wait_seconds))
+    await asyncio.sleep(wait_seconds)
+
+@tasks.loop(hours=24)
+async def pm_reminder_to_sell():
+    #Get appropriate channel for replies
+    print('Sending PM reminder to sell to {}'.format(config['CHANNEL_NAME']))
+    guild = None
+    for g in client.guilds:
+        if g.name == config['GUILD_NAME']:
+            guild = g
+            break
+    channel = None
+    for c in guild.channels:
+        if c.name == config['CHANNEL_NAME']:
+            channel = c
+            break
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
+    if now.weekday() != 6:
+        await channel.send('@everyone Don\'t forget to check afternoon turnip prices!')
+
+@pm_reminder_to_sell.before_loop
+async def pm_reminder_to_sell_before():
+    await client.wait_until_ready()
+    print('Registering pm_reminder_to_sell task. Waiting until top of next day to begin schedule...')
+    now = datetime.datetime.now()
+    if now.hour < 12:
+        wait_seconds = (now.replace(hour=12) - now).seconds
+    else:
+        delta = datetime.timedelta(days=1)
+        next_12PM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=12)
+        wait_seconds = (next_12PM - now).seconds
+    print ('Time until pm_reminder_to_sell first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 #Backing data for the bot
@@ -184,7 +248,12 @@ price_data = {}
 #Start the bot
 try:
     backup_data.start()
-    reminder_to_buy.start()
+    if config['ENABLE_SUNDAY_REMINDER'] == 'True':
+        reminder_to_buy.start()
+    if config['ENABLE_AM_REMINDER'] == 'True':
+        am_reminder_to_sell.start()
+    if config['ENABLE_PM_REMINDER'] == 'True':
+        pm_reminder_to_sell.start()
     client.run(secrets['DISCORD_TOKEN'])
 except KeyError as err:
     print('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
