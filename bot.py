@@ -41,22 +41,22 @@ def set_price(name, price):
     time = get_data_time()
     label = get_data_label(time)
     replace = False
-    if name not in price_data:
-        price_data[name] = []
-    if len(price_data[name]) == time + 1:
+    if name not in price_data['prices']:
+        price_data['prices'][name] = []
+    if len(price_data['prices'][name]) == time + 1:
         replace = True
-        price_data[name][time] = price
+        price_data['prices'][name][time] = price
     else:
-        while(len(price_data[name]) < time):
-            price_data[name].append(0)
-        price_data[name].append(price)
+        while(len(price_data['prices'][name]) < time):
+            price_data['prices'][name].append(0)
+        price_data['prices'][name].append(price)
     return (label, replace)
 
 def get_full_price_string():
     msg_strs = []
-    for name in price_data:
+    for name in price_data['prices']:
         name_strs = [name + ':']
-        for idx, price in enumerate(price_data[name]):
+        for idx, price in enumerate(price_data['prices'][name]):
             label = get_data_label(idx)
             name_strs.append('{}: {}'.format(label, price))
         msg_strs.append('  '.join(name_strs))
@@ -153,7 +153,7 @@ async def backup_data_before():
 async def reset_data():
     #Get appropriate channel for replies
     print('Restetting price_data for the week')
-    price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'))}
+    price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
 
 @reset_data.before_loop
 async def reset_data_before():
@@ -260,7 +260,16 @@ async def pm_reminder_to_sell_before():
     await asyncio.sleep(wait_seconds)
 
 #Backing data for the bot
-price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'))}
+price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
+try:
+    last_sunday = datetime.datetime.now() - datetime.timedelta(days=datetime.date.today().weekday() + 1)
+    with open('backup.json', 'r') as f:
+        data = json.load(f)
+        tstamp = datetime.datetime.strptime(data['TIMESTAMP'], '%d/%m/%Y')
+        if last_sunday.day == tstamp.day and last_sunday.month == tstamp.month and last_sunday.year == tstamp.year:
+            price_data = data
+except IOError as err:
+    print('No backup file found, starting fresh price data.')
 
 #Start the bot
 try:
