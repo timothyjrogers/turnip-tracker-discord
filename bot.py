@@ -47,9 +47,9 @@ def set_price(name, price):
         replace = True
         price_data['prices'][name][time] = price
     else:
-        while(len(price_data['prices'][name]) < time):
+        while(len(price_data['prices'][name]) < time + 1):
             price_data['prices'][name].append(0)
-        price_data['prices'][name].append(price)
+        price_data['prices'][name][time] = price
     return (label, replace)
 
 def get_full_price_string():
@@ -267,6 +267,7 @@ try:
         data = json.load(f)
         tstamp = datetime.datetime.strptime(data['TIMESTAMP'], '%d/%m/%Y')
         if last_sunday.day == tstamp.day and last_sunday.month == tstamp.month and last_sunday.year == tstamp.year:
+            print('Initializing data from backup.json...')
             price_data = data
 except IOError as err:
     print('No backup file found, starting fresh price data.')
