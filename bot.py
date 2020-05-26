@@ -150,6 +150,23 @@ async def backup_data_before():
     await asyncio.sleep(wait_seconds)
 
 @tasks.loop(hours=24)
+async def reset_data():
+    #Get appropriate channel for replies
+    print('Restetting price_data for the week')
+    price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'))}
+
+@reset_data.before_loop
+async def reset_data_before():
+    await client.wait_until_ready()
+    print('Registering reset_data task. Waiting until top of next day to begin schedule...')
+    delta = datetime.timedelta(days=1)
+    now = datetime.datetime.now()
+    next_5AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=5)
+    wait_seconds = (next_5AM - now).seconds
+    print ('Time until reset_data first runs: {} s'.format(wait_seconds))
+    await asyncio.sleep(wait_seconds)
+
+@tasks.loop(hours=24)
 async def reminder_to_buy():
     #Get appropriate channel for replies
     print('Sending reminder to buy to {}'.format(config['CHANNEL_NAME']))
@@ -243,7 +260,7 @@ async def pm_reminder_to_sell_before():
     await asyncio.sleep(wait_seconds)
 
 #Backing data for the bot
-price_data = {}
+price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'))}
 
 #Start the bot
 try:
