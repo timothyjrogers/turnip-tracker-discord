@@ -1,6 +1,8 @@
 import os, json
-import discord #https://discordpy.readthedocs.io/en/latest/index.html
+import asyncio
 import datetime, pytz
+import discord #https://discordpy.readthedocs.io/en/latest/index.html
+from discord.ext import tasks
 
 #Load config.json
 config_path = os.path.abspath(os.path.dirname(__file__))
@@ -26,7 +28,6 @@ except Exception as err:
 
 #Utility functions
 def get_data_time():
-    datetime_data_map = []
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     day_of_week = now.weekday() + 1 if now.weekday() != 6 else 0
     am_or_pm = 0 if now.hour < 12 else 1
@@ -125,12 +126,65 @@ async def on_message(message):
         reply = get_full_price_string()
         await channel.send(message.author.mention + '\n' + reply)
         
+@tasks.loop(hours=1.0)
+async def backup_data():
+    #backup price JSON every hour
+    backup_path = os.path.abspath(os.path.dirname(__file__))
+    backup_name = 'backup.json'
+    backup_fpath = os.path.join(backup_path, backup_name) 
+    print('Backing up price_data to {}...'.format(backup_name))
+    with open(backup_fpath, 'w') as f:
+        json.dump(price_data, f)
+    print('Backup complete.')
+    
+
+@backup_data.before_loop
+async def backup_data_before():
+    await client.wait_until_ready()
+    print('Registering backup_data task. Waiting until top of next hour to begin schedule...')
+    delta = datetime.timedelta(hours=1)
+    now = datetime.datetime.now()
+    next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
+    wait_seconds = (next_hour - now).seconds
+    print ('Time until backup_data first runs: {} s'.format(wait_seconds))
+    await asyncio.sleep(wait_seconds)
+
+@tasks.loop(hours=24)
+async def reminder_to_buy():
+    #Get appropriate channel for replies
+    print('Sending reminder to buy to {}'.format(config['CHANNEL_NAME']))
+    guild = None
+    for g in client.guilds:
+        if g.name == config['GUILD_NAME']:
+            guild = g
+            break
+    channel = None
+    for c in guild.channels:
+        if c.name == config['CHANNEL_NAME']:
+            channel = c
+            break
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
+    if now.weekday() == 0:
+        await channel.send('@everyone Don\'t forget to buy your turnips!')
+
+@reminder_to_buy.before_loop
+async def reminder_to_buy_before():
+    await client.wait_until_ready()
+    print('Registering reminder_to_buy task. Waiting until top of next day to begin schedule...')
+    delta = datetime.timedelta(days=1)
+    now = datetime.datetime.now()
+    next_day = (now + delta).replace(microsecond=0, second=0, minute=0, hour=0)
+    wait_seconds = (next_day - now).seconds
+    print ('Time until reminder_to_buy first runs: {} s'.format(wait_seconds))
+    await asyncio.sleep(wait_seconds)
 
 #Backing data for the bot
 price_data = {}
 
 #Start the bot
 try:
+    backup_data.start()
+    reminder_to_buy.start()
     client.run(secrets['DISCORD_TOKEN'])
 except KeyError as err:
     print('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
