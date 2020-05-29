@@ -34,6 +34,9 @@ The config.json file contains a handful of configurable items.
 * ENABLE_SUNDAY_REMINDER -- This enables or disables the Sunday morning reminder to buy turnips. This reminder goes to @everyone
 * ENABLE_AM_REMINDER -- This enables or disables the non-Sunday morning reminder to check turnip prices. This reminder goes to @everyone
 * ENABLE_PM_REMINDER -- This enables or disables the non-Sunday afternoon reminder to check turnip prices. This reminder goes to @everyone
+* LOG_LEVEL -- The Python [logging module log level](https://docs.python.org/3/library/logging.html#levels) you want the bot to use. Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+* LOG_TYPE -- Options are FILE or STDOUT
+* LOG_FILE_NAME -- The name of the log file to write if LOG_TYPE=FILE. If an absolute path is not given it will be written relative to bot.py.
 
 ## Backups
 Once per hour, at the top of the hour, the current in-memory data for your servers participants is backed up to a file called **backup.json**. This file overwrites the previous backup each time.
