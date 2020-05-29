@@ -165,8 +165,19 @@ async def backup_data_before():
 @tasks.loop(hours=24)
 async def reset_data():
     #Get appropriate channel for replies
+    guild = None
+    for g in client.guilds:
+        if g.name == config['GUILD_NAME']:
+            guild = g
+            break
+    channel = None
+    for c in guild.channels:
+        if c.name == config['CHANNEL_NAME']:
+            channel = c
+            break
     logger.info('Restetting price_data for the week')
     price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
+    await channel.send('Data has been reset for the week.')
 
 @reset_data.before_loop
 async def reset_data_before():
@@ -288,6 +299,7 @@ except IOError as err:
 #Start the bot
 try:
     backup_data.start()
+    reset_data.start()
     if config['ENABLE_SUNDAY_REMINDER'] == 'True':
         reminder_to_buy.start()
     if config['ENABLE_AM_REMINDER'] == 'True':
