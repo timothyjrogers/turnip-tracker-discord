@@ -1,6 +1,7 @@
-import os, json
+import os, json, sys
 import asyncio
 import datetime, pytz
+import logging
 import discord #https://discordpy.readthedocs.io/en/latest/index.html
 from discord.ext import tasks
 
@@ -11,10 +12,21 @@ config_fpath = os.path.join(config_path, config_name)
 try:
     with open(config_fpath, 'r') as f:
         config = json.load(f)
-except KeyError as err:
-    print('Unable to find all config keys, make sure {} still has all keys.\nPrinting error...\n{}'.format(config_name, err))
 except Exception as err:
+    #Print statement because this error can only be thrown before the logger is initialized
     print('Unable to load config, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(config_name, err))
+
+#Configure logging
+log_level_enum = {'DEBUG': logging.DEBUG, 'WARNING': logging.WARNING, 'ERROR': logging.ERROR, 'INFO': logging.INFO}
+logger = logging.getLogger('log')
+if config['LOG_TYPE'] == 'FILE':
+    handler = logging.FileHandler(config['LOG_FILE_NAME'])
+else:
+    handler = logging.StreamHandler(stream=sys.stdout)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(log_level_enum[config['LOG_LEVEL']])
 
 #Load secrets.json
 secrets_path = os.path.abspath(os.path.dirname(__file__))
@@ -24,7 +36,7 @@ try:
     with open(secrets_fpath, 'r') as f:
         secrets = json.load(f)
 except Exception as err:
-    print('Unable to load secrets, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(secrets_name, err))
+    logger.critical('Unable to load secrets, make sure {} exists relative to bot.py. Printing error...'.format(secrets_name, err))
 
 #Utility functions
 def get_data_time():
@@ -73,7 +85,8 @@ async def on_ready():
         if g.name == config['GUILD_NAME']:
             guild = g
             break
-    print('Bot user {} has connected to Server {}\nThe bot will communicate in channel {}'.format(client.user, guild.name, config['CHANNEL_NAME']))
+    logger.info('Bot user {} has connected to Server {}'.format(client.user, guild.name))
+    logger.info('{} will communicate in channel {}'.format(client.user, config['CHANNEL_NAME']))
     channel = None
     for c in guild.channels:
         if c.name == config['CHANNEL_NAME']:
@@ -112,13 +125,13 @@ async def on_message(message):
             result = set_price(message.author.name, price)
         except TypeError as err:
             await channel.send(message.author.mention + ' your price must be an integer.')
-            print(err)
+            logger.error(err)
             return
         if result[1]:
             await channel.send(message.author.mention + ' your price for {} has been replaced with {}.'.format(result[0], price))
         else:
             await channel.send(message.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
-        print('{} has set price {} for {}'.format(message.author, price, result[0]))
+        logger.info('{} has set price {} for {}'.format(message.author, price, result[0]))
     elif message.content.startswith('!prices'):
         fields = message.content.split(' ')
         if len(fields) != 1:
@@ -133,44 +146,43 @@ async def backup_data():
     backup_path = os.path.abspath(os.path.dirname(__file__))
     backup_name = 'backup.json'
     backup_fpath = os.path.join(backup_path, backup_name) 
-    print('Backing up price_data to {}...'.format(backup_name))
+    logger.info('Backing up price_data to {}...'.format(backup_name))
     with open(backup_fpath, 'w') as f:
         json.dump(price_data, f)
-    print('Backup complete.')
-    
+    logger.info('Backup complete.')
 
 @backup_data.before_loop
 async def backup_data_before():
     await client.wait_until_ready()
-    print('Registering backup_data task. Waiting until top of next hour to begin schedule...')
+    logger.info('Registering backup_data task. Waiting until top of next hour to begin schedule...')
     delta = datetime.timedelta(hours=1)
     now = datetime.datetime.now()
     next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
     wait_seconds = (next_hour - now).seconds
-    print ('Time until backup_data first runs: {} s'.format(wait_seconds))
+    logger.info('Time until backup_data first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 @tasks.loop(hours=24)
 async def reset_data():
     #Get appropriate channel for replies
-    print('Restetting price_data for the week')
+    logger.info('Restetting price_data for the week')
     price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
 
 @reset_data.before_loop
 async def reset_data_before():
     await client.wait_until_ready()
-    print('Registering reset_data task. Waiting until top of next day to begin schedule...')
+    logger.info('Registering reset_data task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
     now = datetime.datetime.now()
     next_5AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=5)
     wait_seconds = (next_5AM - now).seconds
-    print ('Time until reset_data first runs: {} s'.format(wait_seconds))
+    logger.info('Time until reset_data first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 @tasks.loop(hours=24)
 async def reminder_to_buy():
     #Get appropriate channel for replies
-    print('Sending reminder to buy to {}'.format(config['CHANNEL_NAME']))
+    logger.info('Sending reminder to buy to {}'.format(config['CHANNEL_NAME']))
     guild = None
     for g in client.guilds:
         if g.name == config['GUILD_NAME']:
@@ -188,18 +200,18 @@ async def reminder_to_buy():
 @reminder_to_buy.before_loop
 async def reminder_to_buy_before():
     await client.wait_until_ready()
-    print('Registering reminder_to_buy task. Waiting until top of next day to begin schedule...')
+    logger.info('Registering reminder_to_buy task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
     now = datetime.datetime.now()
     next_5AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=5)
     wait_seconds = (next_5AM - now).seconds
-    print ('Time until reminder_to_buy first runs: {} s'.format(wait_seconds))
+    logger.info('Time until reminder_to_buy first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 @tasks.loop(hours=24)
 async def am_reminder_to_sell():
     #Get appropriate channel for replies
-    print('Sending AM reminder to sell to {}'.format(config['CHANNEL_NAME']))
+    logger.info('Sending AM reminder to sell to {}'.format(config['CHANNEL_NAME']))
     guild = None
     for g in client.guilds:
         if g.name == config['GUILD_NAME']:
@@ -217,7 +229,7 @@ async def am_reminder_to_sell():
 @am_reminder_to_sell.before_loop
 async def am_reminder_to_sell_before():
     await client.wait_until_ready()
-    print('Registering am_reminder_to_sell task. Waiting until next 8AM to begin schedule...')
+    logger.info('Registering am_reminder_to_sell task. Waiting until next 8AM to begin schedule...')
     now = datetime.datetime.now()
     if now.hour < 8:
         wait_seconds = (now.replace(hour=8) - now).seconds
@@ -225,13 +237,13 @@ async def am_reminder_to_sell_before():
         delta = datetime.timedelta(days=1)
         next_8AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=8)
         wait_seconds = (next_8AM - now).seconds
-    print ('Time until am_reminder_to_sell first runs: {} s'.format(wait_seconds))
+    logger.info('Time until am_reminder_to_sell first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 @tasks.loop(hours=24)
 async def pm_reminder_to_sell():
     #Get appropriate channel for replies
-    print('Sending PM reminder to sell to {}'.format(config['CHANNEL_NAME']))
+    logger.info('Sending PM reminder to sell to {}'.format(config['CHANNEL_NAME']))
     guild = None
     for g in client.guilds:
         if g.name == config['GUILD_NAME']:
@@ -249,7 +261,7 @@ async def pm_reminder_to_sell():
 @pm_reminder_to_sell.before_loop
 async def pm_reminder_to_sell_before():
     await client.wait_until_ready()
-    print('Registering pm_reminder_to_sell task. Waiting until top of next day to begin schedule...')
+    logger.info('Registering pm_reminder_to_sell task. Waiting until top of next day to begin schedule...')
     now = datetime.datetime.now()
     if now.hour < 12:
         wait_seconds = (now.replace(hour=12) - now).seconds
@@ -257,7 +269,7 @@ async def pm_reminder_to_sell_before():
         delta = datetime.timedelta(days=1)
         next_12PM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=12)
         wait_seconds = (next_12PM - now).seconds
-    print ('Time until pm_reminder_to_sell first runs: {} s'.format(wait_seconds))
+    logger.info('Time until pm_reminder_to_sell first runs: {} s'.format(wait_seconds))
     await asyncio.sleep(wait_seconds)
 
 #Backing data for the bot
@@ -268,10 +280,10 @@ try:
         data = json.load(f)
         tstamp = datetime.datetime.strptime(data['TIMESTAMP'], '%d/%m/%Y')
         if last_sunday.day == tstamp.day and last_sunday.month == tstamp.month and last_sunday.year == tstamp.year:
-            print('Initializing data from backup.json...')
+            logger.info('Initializing data from backup.json...')
             price_data = data
 except IOError as err:
-    print('No backup file found, starting fresh price data.')
+    logger.info('No backup file found, starting fresh price data.')
 
 #Start the bot
 try:
@@ -284,6 +296,6 @@ try:
         pm_reminder_to_sell.start()
     client.run(secrets['DISCORD_TOKEN'])
 except KeyError as err:
-    print('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
+    logger.critical('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
 except Exception as err:
-    print('Unknown error starting the bot. Printing error...\n{}'.format(err))
+    logger.critical('Unknown error starting the bot. Printing error...\n{}'.format(err))

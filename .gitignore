@@ -1,6 +1,7 @@
 #Ignore bot secrets
 secrets.json
 backup.json
+bot.log
 
 #All items below are courtesy of https://github.com/github/gitignore/blob/master/Python.gitignore
 # Byte-compiled / optimized / DLL files
