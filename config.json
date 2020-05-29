@@ -5,5 +5,8 @@
     "TIMEZONE": "America/Chicago",
     "ENABLE_SUNDAY_REMINDER": "False",
     "ENABLE_AM_REMINDER": "False",
-    "ENABLE_PM_REMINDER": "False"
+    "ENABLE_PM_REMINDER": "False",
+    "LOG_LEVEL": "DEBUG",
+    "LOG_TYPE": "FILE",
+    "LOG_FILE_NAME": "bot.log"
 }
