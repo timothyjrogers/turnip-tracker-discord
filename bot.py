@@ -1,4 +1,4 @@
-import os, json, sys
+import os, json, sys, re
 import asyncio
 import datetime, pytz
 import logging
@@ -118,20 +118,26 @@ async def on_message(message):
     elif message.content.startswith('!setprice'):
         fields = message.content.split(' ')
         if len(fields) != 2:
+            logger.warning('{} sent invalid !setprice call'.format(message.author))
             await channel.send(message.author.mention + ' use the format !setprice PRICE')
             return
-        try:
-            price = int(fields[1])
-            result = set_price(message.author.name, price)
-        except TypeError as err:
-            await channel.send(message.author.mention + ' your price must be an integer.')
-            logger.error(err)
+        abs_price = re.sub('^-', '', fields[1])
+        if not abs_price.isdigit():
+            logger.warning('{} sent !setprice with non-integer input'.format(message.author))
+            await channel.send('{} your price must be an integer.'.format(message.author.mention))
             return
+        price = int(fields[1])
+        if price < 0:
+            logger.warning('{} sent !setprice with negative input'.format(message.author))
+            await channel.send('{} your price must greater than or equal to zero.'.format(message.author.mention))
+            return
+        result = set_price(message.author.name, price)
         if result[1]:
+            logger.info('{} has replaced price for {} with {}'.format(message.author, result[0], price))
             await channel.send(message.author.mention + ' your price for {} has been replaced with {}.'.format(result[0], price))
         else:
+            logger.info('{} has set price {} for {}'.format(message.author, price, result[0]))
             await channel.send(message.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
-        logger.info('{} has set price {} for {}'.format(message.author, price, result[0]))
     elif message.content.startswith('!prices'):
         fields = message.content.split(' ')
         if len(fields) != 1:
