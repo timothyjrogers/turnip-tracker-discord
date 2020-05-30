@@ -72,6 +72,16 @@ def get_user_price_string(name, prices):
         price_string_pieces.append('{}: {}'.format(label, price))
     return '{}: {}'.format(name, ', '.join(price_string_pieces))
 
+def get_today_price_string(user_prices):
+    idx = get_data_time()
+    label = get_data_label(idx)
+    today_users = [name for name in list(user_prices.keys()) if len(user_prices[name]) == idx + 1]
+    today_users.sort(key=lambda x: user_prices[x][-1], reverse=True)
+    today_price_string_pieces = []
+    for user in today_users:
+        today_price_string_pieces.append('{}: {}'.format(user, user_prices[user][idx]))
+    return '{} prices so far:\n{}'.format(label, '\n'.join(today_price_string_pieces))
+
 def get_full_price_string(user_prices):
     msg_strs = []
     sorted_names = list(user_prices.keys())
@@ -117,10 +127,11 @@ async def on_message(message):
         if c.name == config['CHANNEL_NAME']:
             channel = c
             break
-    #Process help command
+    #!help
     if message.content.startswith('!help'):
-        reply = 'The following commands are available:\n!help -- prints this message\n!setprice INT -- Sets your Islands price data for the current time increment\n!prices -- Retrieves all Islands\' price data for the current increment'
+        reply = 'The following commands are available:\n!help -- prints this message\n!setprice INT -- Sets your Islands price data for the current time increment\n!prices -- Retrieves all Islands\' price data for the current increment\n!myprices -- Retrieves your own prices for the week\n!today -- Retrieves the current time increment prices for all users who\'ve added them'
         await channel.send(message.author.mention + '\n' + reply)
+    #!setprice
     elif message.content.startswith('!setprice'):
         fields = message.content.split(' ')
         if len(fields) != 2:
@@ -144,6 +155,7 @@ async def on_message(message):
         else:
             logger.info('{} has set price {} for {}'.format(message.author, price, result[0]))
             await channel.send(message.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
+    #!prices
     elif message.content.startswith('!prices'):
         fields = message.content.split(' ')
         if len(fields) != 1:
@@ -151,6 +163,21 @@ async def on_message(message):
             return
         reply = get_full_price_string(price_data['prices'])
         await channel.send(message.author.mention + '\n' + reply)
+    elif message.content.startswith('!myprices'):
+        fields = message.content.split(' ')
+        if len(fields) != 1:
+            await channel.send(message.author.mention + ' use the format !today')
+            return
+        reply = get_user_price_string(message.author.name, price_data['prices'][message.author.name])
+        await channel.send('{} {}'.format(message.author.mention, reply))
+    elif message.content.startswith('!today'):
+        fields = message.content.split(' ')
+        if len(fields) != 1:
+            await channel.send(message.author.mention + ' use the format !today')
+            return
+        reply = get_today_price_string(price_data['prices'])
+        await channel.send('{} {}'.format(message.author.mention, reply))
+        
         
 @tasks.loop(hours=1.0)
 async def backup_data():
