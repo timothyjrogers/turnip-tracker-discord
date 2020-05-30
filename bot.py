@@ -47,7 +47,7 @@ def get_data_time():
     return day_of_week + am_or_pm if day_of_week != 0 else day_of_week
 
 def get_data_label(data_time):
-    data_labels_by_index = {0: 'SUN', 1: 'MON(AM)', 2: 'MON(PM)', 3: 'TUES(AM)', 4: 'TUES(PM)', 5: 'WED(AM)', 6: 'WED(PM)', 7: 'THURS(AM)', 8: 'THURS(PM)', 9: 'FRI(AM)', 10: 'FRI(PM)', 11: 'SAT(AM)', 12: 'SAT(PM)'}
+    data_labels_by_index = {0: 'Sun', 1: 'Mon(AM)', 2: 'Mon(PM)', 3: 'Tue(AM)', 4: 'Tue(PM)', 5: 'Wed(AM)', 6: 'Wed(PM)', 7: 'Thu(AM)', 8: 'Thu(PM)', 9: 'Fri(AM)', 10: 'Fri(PM)', 11: 'Sat(AM)', 12: 'Sat(PM)'}
     return data_labels_by_index[data_time]
 
 def set_price(name, price):
@@ -65,14 +65,20 @@ def set_price(name, price):
         price_data['prices'][name][time] = price
     return (label, replace)
 
-def get_full_price_string():
+def get_user_price_string(name, prices):
+    price_string_pieces = []
+    for idx, price in enumerate(prices):
+        label = get_data_label(idx)
+        price_string_pieces.append('{}: {}'.format(label, price))
+    return '{}: {}'.format(name, ', '.join(price_string_pieces))
+
+def get_full_price_string(user_prices):
     msg_strs = []
-    for name in price_data['prices']:
-        name_strs = [name + ':']
-        for idx, price in enumerate(price_data['prices'][name]):
-            label = get_data_label(idx)
-            name_strs.append('{}: {}'.format(label, price))
-        msg_strs.append('  '.join(name_strs))
+    sorted_names = list(user_prices.keys())
+    sorted_names.sort(key=lambda x: (len(user_prices[x]), user_prices[x][-1]), reverse=True)
+    for name in sorted_names:
+        user_price_string = get_user_price_string(name, user_prices[name])
+        msg_strs.append(user_price_string)
     return '\n'.join(msg_strs)
 
 #Discord client and events
@@ -143,7 +149,7 @@ async def on_message(message):
         if len(fields) != 1:
             await channel.send(message.author.mention + ' use the format !prices')
             return
-        reply = get_full_price_string()
+        reply = get_full_price_string(price_data['prices'])
         await channel.send(message.author.mention + '\n' + reply)
         
 @tasks.loop(hours=1.0)
@@ -162,7 +168,7 @@ async def backup_data_before():
     await client.wait_until_ready()
     logger.info('Registering backup_data task. Waiting until top of next hour to begin schedule...')
     delta = datetime.timedelta(hours=1)
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
     wait_seconds = (next_hour - now).seconds
     logger.info('Time until backup_data first runs: {} s'.format(wait_seconds))
@@ -181,16 +187,18 @@ async def reset_data():
         if c.name == config['CHANNEL_NAME']:
             channel = c
             break
-    logger.info('Restetting price_data for the week')
-    price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
-    await channel.send('Data has been reset for the week.')
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
+    if now.weekday() == 6:        
+        logger.info('Restetting price_data for the week')
+        price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
+        await channel.send('Data has been reset for the week.')
 
 @reset_data.before_loop
 async def reset_data_before():
     await client.wait_until_ready()
     logger.info('Registering reset_data task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     next_5AM = (now + delta).replace(microsecond=0, second=0, minute=0, hour=5)
     wait_seconds = (next_5AM - now).seconds
     logger.info('Time until reset_data first runs: {} s'.format(wait_seconds))
@@ -247,7 +255,7 @@ async def am_reminder_to_sell():
 async def am_reminder_to_sell_before():
     await client.wait_until_ready()
     logger.info('Registering am_reminder_to_sell task. Waiting until next 8AM to begin schedule...')
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     if now.hour < 8:
         wait_seconds = (now.replace(hour=8) - now).seconds
     else:
@@ -279,7 +287,7 @@ async def pm_reminder_to_sell():
 async def pm_reminder_to_sell_before():
     await client.wait_until_ready()
     logger.info('Registering pm_reminder_to_sell task. Waiting until top of next day to begin schedule...')
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     if now.hour < 12:
         wait_seconds = (now.replace(hour=12) - now).seconds
     else:
@@ -292,7 +300,7 @@ async def pm_reminder_to_sell_before():
 #Backing data for the bot
 price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
 try:
-    last_sunday = datetime.datetime.now() - datetime.timedelta(days=datetime.date.today().weekday() + 1)
+    last_sunday = datetime.datetime.now(pytz.timezone(config['TIMEZONE'])) - datetime.timedelta(days=datetime.date.today().weekday() + 1)
     with open('backup.json', 'r') as f:
         data = json.load(f)
         tstamp = datetime.datetime.strptime(data['TIMESTAMP'], '%d/%m/%Y')
