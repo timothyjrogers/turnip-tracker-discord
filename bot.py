@@ -65,11 +65,6 @@ def set_price(name, price):
         price_data['prices'][name][time] = price
     return (label, replace)
 
-#TODO
-#def sort_user_price_strings(price_strings):
-    #price_strings.sort(key=len)
-
-
 def get_user_price_string(name, prices):
     price_string_pieces = []
     for idx, price in enumerate(prices):
