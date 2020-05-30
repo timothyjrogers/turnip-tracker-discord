@@ -12,9 +12,10 @@ config_fpath = os.path.join(config_path, config_name)
 try:
     with open(config_fpath, 'r') as f:
         config = json.load(f)
-except Exception as err:
+except IOError as err:
     #Print statement because this error can only be thrown before the logger is initialized
     print('Unable to load config, make sure {} exists relative to bot.py.\n Printing error...\n{}'.format(config_name, err))
+    sys.exit(1)
 
 #Configure logging
 log_level_enum = {'DEBUG': logging.DEBUG, 'WARNING': logging.WARNING, 'ERROR': logging.ERROR, 'INFO': logging.INFO}
@@ -35,8 +36,9 @@ secrets_fpath = os.path.join(secrets_path, secrets_name)
 try:
     with open(secrets_fpath, 'r') as f:
         secrets = json.load(f)
-except Exception as err:
+except IOError as err:
     logger.critical('Unable to load secrets, make sure {} exists relative to bot.py. Printing error...'.format(secrets_name, err))
+    sys.exit(1)
 
 #Utility functions
 def get_data_time():
@@ -350,5 +352,7 @@ try:
     client.run(secrets['DISCORD_TOKEN'])
 except KeyError as err:
     logger.critical('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
+    sys.exit(1)
 except Exception as err:
     logger.critical('Unknown error starting the bot. Printing error...\n{}'.format(err))
+    sys.exit(1)
