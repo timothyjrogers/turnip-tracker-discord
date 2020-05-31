@@ -99,7 +99,7 @@ def get_help_embed():
     description = 'Commands available from {}'.format(config['BOT_NAME'])
     command_strings = {
         '!help': 'Returns this message',
-        '!setprice INT': 'Allows a user to set their price for the current time slot',
+        '!setprice INT | closed': 'Allows a user to set their buy price if it\'s Sunday or sell price for the current time slot\nUsed \'closed\' if your store is closed in the current time slot to set price to 0',
         '!prices': 'Returns all prices for each user who has contributed this week',
         '!myprices': 'Returns your prices for each time slot this week',
         '!today': "Returns all prices for the current time slot for each user who has contributed"
@@ -158,12 +158,16 @@ async def on_message(message):
             logger.warning('{} sent invalid !setprice call'.format(message.author))
             await channel.send(message.author.mention + ' use the format !setprice PRICE')
             return
-        abs_price = re.sub('^-', '', fields[1])
+        if fields[1].lower() == 'closed':
+            abs_price = '0'
+            price = 0
+        else:
+            abs_price = re.sub('^-', '', fields[1])
+            price = int(fields[1])
         if not abs_price.isdigit():
             logger.warning('{} sent !setprice with non-integer input'.format(message.author))
             await channel.send('{} your price must be an integer.'.format(message.author.mention))
             return
-        price = int(fields[1])
         if price < 0:
             logger.warning('{} sent !setprice with negative input'.format(message.author))
             await channel.send('{} your price must greater than or equal to zero.'.format(message.author.mention))
@@ -183,6 +187,7 @@ async def on_message(message):
             return
         reply = get_full_price_string(price_data['prices'])
         await channel.send(message.author.mention + '\n' + reply)
+    #!myprices
     elif message.content.startswith('!myprices'):
         fields = message.content.split(' ')
         if len(fields) != 1:
@@ -190,6 +195,7 @@ async def on_message(message):
             return
         reply = get_user_price_string(message.author.name, price_data['prices'][message.author.name])
         await channel.send('{} {}'.format(message.author.mention, reply))
+    #!today
     elif message.content.startswith('!today'):
         fields = message.content.split(' ')
         if len(fields) != 1:
@@ -198,7 +204,7 @@ async def on_message(message):
         reply = get_today_price_string(price_data['prices'])
         await channel.send('{} {}'.format(message.author.mention, reply))
         
-        
+#Scheduled tasks
 @tasks.loop(hours=1.0)
 async def backup_data():
     #backup price JSON every hour
