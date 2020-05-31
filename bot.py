@@ -93,6 +93,22 @@ def get_full_price_string(user_prices):
         msg_strs.append(user_price_string)
     return '\n'.join(msg_strs)
 
+def get_help_embed():
+    title = '{} commands'.format(config['BOT_NAME'])
+    author = config['BOT_NAME']
+    description = 'Commands available from {}'.format(config['BOT_NAME'])
+    command_strings = {
+        '!help': 'Returns this message',
+        '!setprice INT': 'Allows a user to set their price for the current time slot',
+        '!prices': 'Returns all prices for each user who has contributed this week',
+        '!myprices': 'Returns your prices for each time slot this week',
+        '!today': "Returns all prices for the current time slot for each user who has contributed"
+    }
+    embed = discord.Embed(title=title, description=description, color=0x00ff00)
+    for command in command_strings:
+        embed.add_field(name=command, value=command_strings[command], inline=False)
+    return embed
+
 #Discord client and events
 client = discord.Client()
 
@@ -131,8 +147,10 @@ async def on_message(message):
             break
     #!help
     if message.content.startswith('!help'):
-        reply = 'The following commands are available:\n!help -- prints this message\n!setprice INT -- Sets your Islands price data for the current time increment\n!prices -- Retrieves all Islands\' price data for the current increment\n!myprices -- Retrieves your own prices for the week\n!today -- Retrieves the current time increment prices for all users who\'ve added them'
-        await channel.send(message.author.mention + '\n' + reply)
+        #reply = 'The following commands are available:\n!help -- prints this message\n!setprice INT -- Sets your Islands price data for the current time increment\n!prices -- Retrieves all Islands\' price data for the current increment\n!myprices -- Retrieves your own prices for the week\n!today -- Retrieves the current time increment prices for all users who\'ve added them'
+        #await channel.send(message.author.mention + '\n' + reply)
+        reply = get_help_embed()
+        await channel.send(embed=reply)
     #!setprice
     elif message.content.startswith('!setprice'):
         fields = message.content.split(' ')
