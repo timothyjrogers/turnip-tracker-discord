@@ -109,6 +109,26 @@ def get_help_embed():
         embed.add_field(name=command, value=command_strings[command], inline=False)
     return embed
 
+def get_prices_embed(user_prices):
+    title = 'Group Prices for the Week'
+    author = config['BOT_NAME']
+    description = 'Prices from all contributors'
+    site_string_base = 'https://ac-turnip.com/share?f='
+
+    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
+    for user in user_prices:
+        prices = []
+        price_strings = []
+        for idx, price in enumerate(user_prices[user]):
+            label = get_data_label(idx)
+            prices.append(price)
+            price_strings.append('{}: {}'.format(label, price))
+        ac_turnip_string = '{}{}'.format(site_string_base, '-'.join(map(str, prices)))
+        ac_turnip_markup = '[ac-turnip.com Graph]({})'.format(ac_turnip_string)
+        user_price_string = '{}\n{}'.format(ac_turnip_markup, '\n'.join(price_strings))
+        embed.add_field(name=user, value=user_price_string, inline=False)
+    return embed
+
 #Discord client and events
 client = discord.Client()
 
@@ -185,8 +205,10 @@ async def on_message(message):
         if len(fields) != 1:
             await channel.send(message.author.mention + ' use the format !prices')
             return
-        reply = get_full_price_string(price_data['prices'])
-        await channel.send(message.author.mention + '\n' + reply)
+        #reply = get_full_price_string(price_data['prices'])
+        reply = get_prices_embed(price_data['prices'])
+        #await channel.send(message.author.mention + '\n' + reply)
+        await channel.send(embed=reply)
     #!myprices
     elif message.content.startswith('!myprices'):
         fields = message.content.split(' ')
@@ -354,7 +376,10 @@ async def pm_reminder_to_sell_before():
 #Backing data for the bot
 price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
 try:
-    last_sunday = datetime.datetime.now(pytz.timezone(config['TIMEZONE'])) - datetime.timedelta(days=datetime.date.today().weekday() + 1)
+    if datetime.date.today().weekday() == 6:
+        last_sunday = datetime.date.today()
+    else:
+        last_sunday = datetime.datetime.now(pytz.timezone(config['TIMEZONE'])) - datetime.timedelta(days=datetime.date.today().weekday() + 1)
     with open('backup.json', 'r') as f:
         data = json.load(f)
         tstamp = datetime.datetime.strptime(data['TIMESTAMP'], '%d/%m/%Y')
