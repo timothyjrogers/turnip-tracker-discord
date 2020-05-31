@@ -237,6 +237,7 @@ async def reset_data():
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     if now.weekday() == 6:        
         logger.info('Restetting price_data for the week')
+        global price_data
         price_data = {'TIMESTAMP': datetime.date.today().strftime('%d/%m/%Y'), 'prices': {}}
         await channel.send('Data has been reset for the week.')
 
