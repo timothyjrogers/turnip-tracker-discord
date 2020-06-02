@@ -67,32 +67,6 @@ def set_price(name, price):
         price_data['prices'][name][time] = price
     return (label, replace)
 
-def get_user_price_string(name, prices):
-    price_string_pieces = []
-    for idx, price in enumerate(prices):
-        label = get_data_label(idx)
-        price_string_pieces.append('{}: {}'.format(label, price))
-    return '{}: {}'.format(name, ', '.join(price_string_pieces))
-
-def get_today_price_string(user_prices):
-    idx = get_data_time()
-    label = get_data_label(idx)
-    today_users = [name for name in list(user_prices.keys()) if len(user_prices[name]) == idx + 1]
-    today_users.sort(key=lambda x: user_prices[x][-1], reverse=True)
-    today_price_string_pieces = []
-    for user in today_users:
-        today_price_string_pieces.append('{}: {}'.format(user, user_prices[user][idx]))
-    return '{} prices so far:\n{}'.format(label, '\n'.join(today_price_string_pieces))
-
-def get_full_price_string(user_prices):
-    msg_strs = []
-    sorted_names = list(user_prices.keys())
-    sorted_names.sort(key=lambda x: (len(user_prices[x]), user_prices[x][-1]), reverse=True)
-    for name in sorted_names:
-        user_price_string = get_user_price_string(name, user_prices[name])
-        msg_strs.append(user_price_string)
-    return '\n'.join(msg_strs)
-
 def get_help_embed():
     title = '{} commands'.format(config['BOT_NAME'])
     author = config['BOT_NAME']
@@ -114,8 +88,8 @@ def get_prices_embed(user_prices):
     author = config['BOT_NAME']
     description = 'Prices from all contributors'
     site_string_base = 'https://ac-turnip.com/share?f='
-
     embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
+
     for user in user_prices:
         prices = []
         price_strings = []
@@ -126,6 +100,39 @@ def get_prices_embed(user_prices):
         ac_turnip_string = '{}{}'.format(site_string_base, '-'.join(map(str, prices)))
         ac_turnip_markup = '[ac-turnip.com Graph]({})'.format(ac_turnip_string)
         user_price_string = '{}\n{}'.format(ac_turnip_markup, '\n'.join(price_strings))
+        embed.add_field(name=user, value=user_price_string, inline=False)
+    return embed
+
+def get_myprice_embed(name, user_prices):
+    title = '{}\'s Prices for the Week'.format(name)
+    author = config['BOT_NAME']
+    description = 'Prices for {}'.format(name)
+    site_string_base = 'https://ac-turnip.com/share?f='
+    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
+    price_strings = []
+    prices = []
+    for idx, price in enumerate(user_prices):
+        label = get_data_label(idx)
+        prices.append(price)
+        price_strings.append('{}: {}'.format(label, price))
+    ac_turnip_string = '{}{}'.format(site_string_base, '-'.join(map(str, prices)))
+    ac_turnip_markup = '[ac-turnip.com Graph]({})'.format(ac_turnip_string)
+    user_price_string = '{}\n{}'.format(ac_turnip_markup, '\n'.join(price_strings))
+    embed.add_field(name=name, value=user_price_string, inline=False)
+    return embed
+
+def get_today_embed(user_prices):
+    idx = get_data_time()
+    label = get_data_label(idx)
+    title = 'Group Prices for {}'.format(label)
+    author = config['BOT_NAME']
+    description = '{} prices from all contributors'.format(label)
+    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
+
+    today_users = [name for name in list(user_prices.keys()) if len(user_prices[name]) == idx + 1]
+    today_users.sort(key=lambda x: user_prices[x][-1], reverse=True)
+    for user in today_users:
+        user_price_string = '{}'.format(user_prices[user][idx])
         embed.add_field(name=user, value=user_price_string, inline=False)
     return embed
 
@@ -167,8 +174,6 @@ async def on_message(message):
             break
     #!help
     if message.content.startswith('!help'):
-        #reply = 'The following commands are available:\n!help -- prints this message\n!setprice INT -- Sets your Islands price data for the current time increment\n!prices -- Retrieves all Islands\' price data for the current increment\n!myprices -- Retrieves your own prices for the week\n!today -- Retrieves the current time increment prices for all users who\'ve added them'
-        #await channel.send(message.author.mention + '\n' + reply)
         reply = get_help_embed()
         await channel.send(embed=reply)
     #!setprice
@@ -205,9 +210,7 @@ async def on_message(message):
         if len(fields) != 1:
             await channel.send(message.author.mention + ' use the format !prices')
             return
-        #reply = get_full_price_string(price_data['prices'])
         reply = get_prices_embed(price_data['prices'])
-        #await channel.send(message.author.mention + '\n' + reply)
         await channel.send(embed=reply)
     #!myprices
     elif message.content.startswith('!myprices'):
@@ -215,16 +218,16 @@ async def on_message(message):
         if len(fields) != 1:
             await channel.send(message.author.mention + ' use the format !today')
             return
-        reply = get_user_price_string(message.author.name, price_data['prices'][message.author.name])
-        await channel.send('{} {}'.format(message.author.mention, reply))
+        reply = get_myprice_embed(message.author.name, price_data['prices'][message.author.name])
+        await channel.send(embed=reply)
     #!today
     elif message.content.startswith('!today'):
         fields = message.content.split(' ')
         if len(fields) != 1:
             await channel.send(message.author.mention + ' use the format !today')
             return
-        reply = get_today_price_string(price_data['prices'])
-        await channel.send('{} {}'.format(message.author.mention, reply))
+        reply = get_today_embed(price_data['prices'])
+        await channel.send(embed=reply)
         
 #Scheduled tasks
 @tasks.loop(hours=1.0)
