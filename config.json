@@ -1,12 +1,12 @@
 {
     "BOT_NAME": "turnip-bot",
-    "GUILD_NAME": "MyServer",
+    "GUILD_NAME": "Tim&Company",
     "CHANNEL_NAME": "acnh-turnips",
     "TIMEZONE": "America/Chicago",
-    "ENABLE_SUNDAY_REMINDER": "False",
-    "ENABLE_AM_REMINDER": "False",
-    "ENABLE_PM_REMINDER": "False",
+    "ENABLE_SUNDAY_REMINDER": "True",
+    "ENABLE_AM_REMINDER": "True",
+    "ENABLE_PM_REMINDER": "True",
     "LOG_LEVEL": "DEBUG",
-    "LOG_TYPE": "FILE",
+    "LOG_TYPE": "STDOUT",
     "LOG_FILE_NAME": "bot.log"
 }

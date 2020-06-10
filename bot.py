@@ -90,7 +90,9 @@ def get_prices_embed(user_prices):
     site_string_base = 'https://ac-turnip.com/share?f='
     embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
 
-    for user in user_prices:
+    sorted_users = list(user_prices.keys())
+    sorted_users.sort(key=lambda x: (len(user_prices[x]), user_prices[x][-1]), reverse=True)
+    for user in sorted_users:
         prices = []
         price_strings = []
         for idx, price in enumerate(user_prices[user]):
