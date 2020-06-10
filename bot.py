@@ -37,7 +37,7 @@ try:
     with open(secrets_fpath, 'r') as f:
         secrets = json.load(f)
 except IOError as err:
-    logger.critical('Unable to load secrets, make sure {} exists relative to bot.py. Printing error...'.format(secrets_name, err))
+    logger.critical('Unable to load secrets, make sure {} exists relative to bot.py. Printing error...\n{}'.format(secrets_name, err))
     sys.exit(1)
 
 #Utility functions
@@ -78,7 +78,7 @@ def get_help_embed():
         '!myprices': 'Returns your prices for each time slot this week',
         '!today': "Returns all prices for the current time slot for each user who has contributed"
     }
-    embed = discord.Embed(title=title, description=description, color=0x00ff00)
+    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
     for command in command_strings:
         embed.add_field(name=command, value=command_strings[command], inline=False)
     return embed

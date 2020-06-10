@@ -2,6 +2,7 @@
 secrets.json
 backup.json
 bot.log
+.vscode/
 
 #All items below are courtesy of https://github.com/github/gitignore/blob/master/Python.gitignore
 # Byte-compiled / optimized / DLL files
