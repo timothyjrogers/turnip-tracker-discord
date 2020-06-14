@@ -145,7 +145,11 @@ async def on_ready():
     await channel.send('{} has joined the channel.\nNote: All bot times are using {}'.format(config['BOT_NAME'], config['TIMEZONE']))
 
 #Bot ! commands
+help_cooldown_period = int(config['HELP_CMD_COOLDOWN_PERIOD'])
+help_cooldown_limit = int(config['HELP_CMD_COOLDOWN_LIMIT'])
+help_cooldown_scope = commands.BucketType.guild if config['HELP_CMD_COOLDOWN_SCOPE'] == 'CHANNEL' else commands.BucketType.user
 @bot.command()
+@commands.cooldown(help_cooldown_limit, help_cooldown_period, help_cooldown_scope)
 async def help(ctx):
     logger.info('!help command received from {}'.format(ctx.author))
     if ctx.author == bot.user:
@@ -154,11 +158,11 @@ async def help(ctx):
     author = config['BOT_NAME']
     description = 'Commands available from {}'.format(config['BOT_NAME'])
     command_strings = {
-        '!help': 'Returns this message',
-        '!setprice INT | closed': 'Allows a user to set their buy price if it\'s Sunday or sell price for the current time slot\nUsed \'closed\' if your store is closed in the current time slot to set price to 0',
-        '!prices': 'Returns all prices for each user who has contributed this week',
-        '!myprices': 'Returns your prices for each time slot this week',
-        '!today': "Returns all prices for the current time slot for each user who has contributed"
+        '!help': 'Returns this message\n({} per {}s for {})'.format(config['HELP_CMD_COOLDOWN_LIMIT'], config['HELP_CMD_COOLDOWN_PERIOD'], config['HELP_CMD_COOLDOWN_SCOPE']),
+        '!setprice INT | closed': 'Allows a user to set their buy price if it\'s Sunday or sell price for the current time slot\nUsed \'closed\' if your store is closed in the current time slot to set price to 0\n({} per {}s for {})'.format(config['SETPRICE_CMD_COOLDOWN_LIMIT'], config['SETPRICE_CMD_COOLDOWN_PERIOD'], config['SETPRICE_CMD_COOLDOWN_SCOPE']),
+        '!prices': 'Returns all prices for each user who has contributed this week\n({} per {}s for {})'.format(config['PRICES_CMD_COOLDOWN_LIMIT'], config['PRICES_CMD_COOLDOWN_PERIOD'], config['PRICES_CMD_COOLDOWN_SCOPE']),
+        '!myprices': 'Returns your prices for each time slot this week\n({} per {}s for {})'.format(config['MYPRICES_CMD_COOLDOWN_LIMIT'], config['MYPRICES_CMD_COOLDOWN_PERIOD'], config['MYPRICES_CMD_COOLDOWN_SCOPE']),
+        '!today': 'Returns all prices for the current time slot for each user who has contributed\n({} per {}s for {})'.format(config['TODAY_CMD_COOLDOWN_LIMIT'], config['TODAY_CMD_COOLDOWN_PERIOD'], config['TODAY_CMD_COOLDOWN_SCOPE'])
     }
     embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
     for command in command_strings:
@@ -166,7 +170,11 @@ async def help(ctx):
     logger.info('Sending !help reply to {}'.format(ctx.channel.name))
     await ctx.channel.send(embed=embed)
 
+setprice_cooldown_period = int(config['SETPRICE_CMD_COOLDOWN_PERIOD'])
+setprice_cooldown_limit = int(config['SETPRICE_CMD_COOLDOWN_LIMIT'])
+setprice_cooldown_scope = commands.BucketType.guild if config['SETPRICE_CMD_COOLDOWN_SCOPE'] == 'CHANNEL' else commands.BucketType.user
 @bot.command()
+@commands.cooldown(setprice_cooldown_limit, setprice_cooldown_period, setprice_cooldown_scope)
 async def setprice(ctx, price):
     logger.info('!setprice command received from {}, price={}'.format(ctx.author, price))
     if ctx.author == bot.user:
@@ -193,7 +201,12 @@ async def setprice(ctx, price):
         logger.info('{} has set price {} for {}'.format(ctx.author, price, result[0]))
         await ctx.channel.send(ctx.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
 
+#Bot ! commands
+prices_cooldown_period = int(config['PRICES_CMD_COOLDOWN_PERIOD'])
+prices_cooldown_limit = int(config['PRICES_CMD_COOLDOWN_LIMIT'])
+prices_cooldown_scope = commands.BucketType.guild if config['PRICES_CMD_COOLDOWN_SCOPE'] == 'CHANNEL' else commands.BucketType.user
 @bot.command()
+@commands.cooldown(prices_cooldown_limit, prices_cooldown_period, prices_cooldown_scope)
 async def prices(ctx):
     logger.info('!prices command received from {}'.format(ctx.author))
     if ctx.author == bot.user:
@@ -201,7 +214,11 @@ async def prices(ctx):
     reply = get_prices_embed(price_data['prices'])
     await ctx.channel.send(embed=reply)
 
+myprices_cooldown_period = int(config['MYPRICES_CMD_COOLDOWN_PERIOD'])
+myprices_cooldown_limit = int(config['MYPRICES_CMD_COOLDOWN_LIMIT'])
+myprices_cooldown_scope = commands.BucketType.guild if config['MYPRICES_CMD_COOLDOWN_SCOPE'] == 'CHANNEL' else commands.BucketType.user
 @bot.command()
+@commands.cooldown(myprices_cooldown_limit, myprices_cooldown_period, myprices_cooldown_scope)
 async def myprices(ctx):
     logger.info('!myprices command received from {}'.format(ctx.author))
     if ctx.author == bot.user:
@@ -209,7 +226,11 @@ async def myprices(ctx):
     reply = get_myprice_embed(ctx.author.name, price_data['prices'][ctx.author.name])
     await ctx.channel.send(embed=reply)
 
+today_cooldown_period = int(config['TODAY_CMD_COOLDOWN_PERIOD'])
+today_cooldown_limit = int(config['TODAY_CMD_COOLDOWN_LIMIT'])
+today_cooldown_scope = commands.BucketType.guild if config['TODAY_CMD_COOLDOWN_SCOPE'] == 'CHANNEL' else commands.BucketType.user
 @bot.command()
+@commands.cooldown(today_cooldown_limit, today_cooldown_period, today_cooldown_scope)
 async def today(ctx):
     logger.info('!today command received from {}'.format(ctx.author))
     if ctx.author == bot.user:

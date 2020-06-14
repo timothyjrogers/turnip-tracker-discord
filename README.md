@@ -37,6 +37,21 @@ The config.json file contains a handful of configurable items.
 * LOG_LEVEL -- The Python [logging module log level](https://docs.python.org/3/library/logging.html#levels) you want the bot to use. Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 * LOG_TYPE -- Options are FILE or STDOUT
 * LOG_FILE_NAME -- The name of the log file to write if LOG_TYPE=FILE. If an absolute path is not given it will be written relative to bot.py.
+* HELP_CMD_COOLDOWN_PERIOD -- Cooldown timeframe for !help command in seconds
+* HELP_CMD_COOLDOWN_LIMIT -- Number of !help commands allowed in cooldown period
+* HELP_CMD_COOLDOWN_SCOPE -- Who the !help cooldown applies to: USER or CHANNEL
+* PRICES_CMD_COOLDOWN_PERIOD -- Cooldown timeframe for !prices command in seconds
+* PRICES_CMD_COOLDOWN_LIMIT -- Number of !prices commands allowed in cooldown period
+* PRICES_CMD_COOLDOWN_SCOPE -- Who the !prices cooldown applies to: USER or CHANNEL
+* MYPRICES_CMD_COOLDOWN_PERIOD -- Cooldown timeframe for !myprices command in seconds
+* MYPRICES_CMD_COOLDOWN_LIMIT -- Number of !myprices commands allowed in cooldown period
+* MYPRICES_CMD_COOLDOWN_SCOPE -- Who the !myprices cooldown applies to: USER or CHANNEL
+* TODAY_CMD_COOLDOWN_PERIOD -- Cooldown timeframe for !today command in seconds
+* TODAY_CMD_COOLDOWN_LIMIT -- Number of !today commands allowed in cooldown period
+* TODAY_CMD_COOLDOWN_SCOPE -- Who the !today cooldown applies to: USER or CHANNEL
+* SETPRICE_CMD_COOLDOWN_PERIOD -- Cooldown timeframe for !setprice command in seconds
+* SETPRICE_CMD_COOLDOWN_LIMIT -- Number of !setprice commands allowed in cooldown period
+* SETPRICE_CMD_COOLDOWN_SCOPE -- Who the !setprice cooldown applies to: USER or CHANNEL
 
 ## Backups
 Once per hour, at the top of the hour, the current in-memory data for your servers participants is backed up to a file called **backup.json**. This file overwrites the previous backup each time.
