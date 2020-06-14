@@ -3,7 +3,7 @@ import asyncio
 import datetime, pytz
 import logging
 import discord #https://discordpy.readthedocs.io/en/latest/index.html
-from discord.ext import tasks
+from discord.ext import tasks, commands
 
 #Load config.json
 config_path = os.path.abspath(os.path.dirname(__file__))
@@ -67,22 +67,6 @@ def set_price(name, price):
         price_data['prices'][name][time] = price
     return (label, replace)
 
-def get_help_embed():
-    title = '{} commands'.format(config['BOT_NAME'])
-    author = config['BOT_NAME']
-    description = 'Commands available from {}'.format(config['BOT_NAME'])
-    command_strings = {
-        '!help': 'Returns this message',
-        '!setprice INT | closed': 'Allows a user to set their buy price if it\'s Sunday or sell price for the current time slot\nUsed \'closed\' if your store is closed in the current time slot to set price to 0',
-        '!prices': 'Returns all prices for each user who has contributed this week',
-        '!myprices': 'Returns your prices for each time slot this week',
-        '!today': "Returns all prices for the current time slot for each user who has contributed"
-    }
-    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
-    for command in command_strings:
-        embed.add_field(name=command, value=command_strings[command], inline=False)
-    return embed
-
 def get_prices_embed(user_prices):
     title = 'Group Prices for the Week'
     author = config['BOT_NAME']
@@ -139,17 +123,19 @@ def get_today_embed(user_prices):
     return embed
 
 #Discord client and events
-client = discord.Client()
+bot = commands.Bot(command_prefix='!')
+bot.remove_command("help")
 
-@client.event
+#Bot on_ready setup
+@bot.event
 async def on_ready():
     guild = None
-    for g in client.guilds:
+    for g in bot.guilds:
         if g.name == config['GUILD_NAME']:
             guild = g
             break
-    logger.info('Bot user {} has connected to Server {}'.format(client.user, guild.name))
-    logger.info('{} will communicate in channel {}'.format(client.user, config['CHANNEL_NAME']))
+    logger.info('Bot user {} has connected to Server {}'.format(bot.user, guild.name))
+    logger.info('{} will communicate in channel {}'.format(bot.user, config['CHANNEL_NAME']))
     channel = None
     for c in guild.channels:
         if c.name == config['CHANNEL_NAME']:
@@ -158,78 +144,78 @@ async def on_ready():
     #TODO throw exception if channel not found
     await channel.send('{} has joined the channel.\nNote: All bot times are using {}'.format(config['BOT_NAME'], config['TIMEZONE']))
 
-@client.event
-async def on_message(message):
-    #bot should not reply to itself
-    if message.author == client.user:
+#Bot ! commands
+@bot.command()
+async def help(ctx):
+    logger.info('!help command received from {}'.format(ctx.author))
+    if ctx.author == bot.user:
         return
-    #Get appropriate channel for replies
-    guild = None
-    for g in client.guilds:
-        if g.name == config['GUILD_NAME']:
-            guild = g
-            break
-    channel = None
-    for c in guild.channels:
-        if c.name == config['CHANNEL_NAME']:
-            channel = c
-            break
-    #!help
-    if message.content.startswith('!help'):
-        reply = get_help_embed()
-        await channel.send(embed=reply)
-    #!setprice
-    elif message.content.startswith('!setprice'):
-        fields = message.content.split(' ')
-        if len(fields) != 2:
-            logger.warning('{} sent invalid !setprice call'.format(message.author))
-            await channel.send(message.author.mention + ' use the format !setprice PRICE')
-            return
-        if fields[1].lower() == 'closed':
-            abs_price = '0'
-            price = 0
-        else:
-            abs_price = re.sub('^-', '', fields[1])
-            price = int(fields[1])
-        if not abs_price.isdigit():
-            logger.warning('{} sent !setprice with non-integer input'.format(message.author))
-            await channel.send('{} your price must be an integer.'.format(message.author.mention))
-            return
-        if price < 0:
-            logger.warning('{} sent !setprice with negative input'.format(message.author))
-            await channel.send('{} your price must greater than or equal to zero.'.format(message.author.mention))
-            return
-        result = set_price(message.author.name, price)
-        if result[1]:
-            logger.info('{} has replaced price for {} with {}'.format(message.author, result[0], price))
-            await channel.send(message.author.mention + ' your price for {} has been replaced with {}.'.format(result[0], price))
-        else:
-            logger.info('{} has set price {} for {}'.format(message.author, price, result[0]))
-            await channel.send(message.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
-    #!prices
-    elif message.content.startswith('!prices'):
-        fields = message.content.split(' ')
-        if len(fields) != 1:
-            await channel.send(message.author.mention + ' use the format !prices')
-            return
-        reply = get_prices_embed(price_data['prices'])
-        await channel.send(embed=reply)
-    #!myprices
-    elif message.content.startswith('!myprices'):
-        fields = message.content.split(' ')
-        if len(fields) != 1:
-            await channel.send(message.author.mention + ' use the format !today')
-            return
-        reply = get_myprice_embed(message.author.name, price_data['prices'][message.author.name])
-        await channel.send(embed=reply)
-    #!today
-    elif message.content.startswith('!today'):
-        fields = message.content.split(' ')
-        if len(fields) != 1:
-            await channel.send(message.author.mention + ' use the format !today')
-            return
-        reply = get_today_embed(price_data['prices'])
-        await channel.send(embed=reply)
+    title = '{} commands'.format(config['BOT_NAME'])
+    author = config['BOT_NAME']
+    description = 'Commands available from {}'.format(config['BOT_NAME'])
+    command_strings = {
+        '!help': 'Returns this message',
+        '!setprice INT | closed': 'Allows a user to set their buy price if it\'s Sunday or sell price for the current time slot\nUsed \'closed\' if your store is closed in the current time slot to set price to 0',
+        '!prices': 'Returns all prices for each user who has contributed this week',
+        '!myprices': 'Returns your prices for each time slot this week',
+        '!today': "Returns all prices for the current time slot for each user who has contributed"
+    }
+    embed = discord.Embed(title=title, description=description, color=0x00ff00, author=author)
+    for command in command_strings:
+        embed.add_field(name=command, value=command_strings[command], inline=False)
+    logger.info('Sending !help reply to {}'.format(ctx.channel.name))
+    await ctx.channel.send(embed=embed)
+
+@bot.command()
+async def setprice(ctx, price):
+    logger.info('!setprice command received from {}, price={}'.format(ctx.author, price))
+    if ctx.author == bot.user:
+        return
+    if price.lower() == 'closed':
+        abs_price = '0'
+        price = 0
+    else:
+        abs_price = re.sub('^-', '', price)
+        price = int(price)
+    if not abs_price.isdigit():
+        logger.warning('{} sent !setprice with non-integer input'.format(ctx.author))
+        await ctx.channel.send('{} your price must be an integer.'.format(ctx.author.mention))
+        return
+    if price < 0:
+        logger.warning('{} sent !setprice with negative input'.format(ctx.author))
+        await ctx.channel.send('{} your price must greater than or equal to zero.'.format(ctx.author.mention))
+        return
+    result = set_price(ctx.author.name, price)
+    if result[1]:
+        logger.info('{} has replaced price for {} with {}'.format(ctx.author, result[0], price))
+        await ctx.channel.send(ctx.author.mention + ' your price for {} has been replaced with {}.'.format(result[0], price))
+    else:
+        logger.info('{} has set price {} for {}'.format(ctx.author, price, result[0]))
+        await ctx.channel.send(ctx.author.mention + ' your price of {} for {} has been saved.'.format(price, result[0]))
+
+@bot.command()
+async def prices(ctx):
+    logger.info('!prices command received from {}'.format(ctx.author))
+    if ctx.author == bot.user:
+        return
+    reply = get_prices_embed(price_data['prices'])
+    await ctx.channel.send(embed=reply)
+
+@bot.command()
+async def myprices(ctx):
+    logger.info('!myprices command received from {}'.format(ctx.author))
+    if ctx.author == bot.user:
+        return
+    reply = get_myprice_embed(ctx.author.name, price_data['prices'][ctx.author.name])
+    await ctx.channel.send(embed=reply)
+
+@bot.command()
+async def today(ctx):
+    logger.info('!today command received from {}'.format(ctx.author))
+    if ctx.author == bot.user:
+        return
+    reply = get_today_embed(price_data['prices'])
+    await ctx.channel.send(embed=reply)
         
 #Scheduled tasks
 @tasks.loop(hours=1.0)
@@ -245,7 +231,7 @@ async def backup_data():
 
 @backup_data.before_loop
 async def backup_data_before():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
     logger.info('Registering backup_data task. Waiting until top of next hour to begin schedule...')
     delta = datetime.timedelta(hours=1)
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
@@ -258,7 +244,7 @@ async def backup_data_before():
 async def reset_data():
     #Get appropriate channel for replies
     guild = None
-    for g in client.guilds:
+    for g in bot.guilds:
         if g.name == config['GUILD_NAME']:
             guild = g
             break
@@ -276,7 +262,7 @@ async def reset_data():
 
 @reset_data.before_loop
 async def reset_data_before():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
     logger.info('Registering reset_data task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
@@ -290,7 +276,7 @@ async def reminder_to_buy():
     #Get appropriate channel for replies
     logger.info('Sending reminder to buy to {}'.format(config['CHANNEL_NAME']))
     guild = None
-    for g in client.guilds:
+    for g in bot.guilds:
         if g.name == config['GUILD_NAME']:
             guild = g
             break
@@ -305,7 +291,7 @@ async def reminder_to_buy():
 
 @reminder_to_buy.before_loop
 async def reminder_to_buy_before():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
     logger.info('Registering reminder_to_buy task. Waiting until top of next day to begin schedule...')
     delta = datetime.timedelta(days=1)
     now = datetime.datetime.now()
@@ -319,7 +305,7 @@ async def am_reminder_to_sell():
     #Get appropriate channel for replies
     logger.info('Sending AM reminder to sell to {}'.format(config['CHANNEL_NAME']))
     guild = None
-    for g in client.guilds:
+    for g in bot.guilds:
         if g.name == config['GUILD_NAME']:
             guild = g
             break
@@ -334,7 +320,7 @@ async def am_reminder_to_sell():
 
 @am_reminder_to_sell.before_loop
 async def am_reminder_to_sell_before():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
     logger.info('Registering am_reminder_to_sell task. Waiting until next 8AM to begin schedule...')
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     if now.hour < 8:
@@ -351,7 +337,7 @@ async def pm_reminder_to_sell():
     #Get appropriate channel for replies
     logger.info('Sending PM reminder to sell to {}'.format(config['CHANNEL_NAME']))
     guild = None
-    for g in client.guilds:
+    for g in bot.guilds:
         if g.name == config['GUILD_NAME']:
             guild = g
             break
@@ -366,7 +352,7 @@ async def pm_reminder_to_sell():
 
 @pm_reminder_to_sell.before_loop
 async def pm_reminder_to_sell_before():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
     logger.info('Registering pm_reminder_to_sell task. Waiting until top of next day to begin schedule...')
     now = datetime.datetime.now(pytz.timezone(config['TIMEZONE']))
     if now.hour < 12:
@@ -404,7 +390,7 @@ try:
         am_reminder_to_sell.start()
     if config['ENABLE_PM_REMINDER'] == 'True':
         pm_reminder_to_sell.start()
-    client.run(secrets['DISCORD_TOKEN'])
+    bot.run(secrets['DISCORD_TOKEN'])
 except KeyError as err:
     logger.critical('Unable to start the bot. Please make sure DISCORD_TOKEN is set in secrets.json')
     sys.exit(1)
