@@ -237,7 +237,13 @@ async def today(ctx):
         return
     reply = get_today_embed(price_data['prices'])
     await ctx.channel.send(embed=reply)
-        
+
+@bot.command()
+@commands.has_any_role(*config['PRIVILEGED_ROLES'])
+async def maintenance(ctx):
+    maint_msg = '{} is going offline for maintenance.'.format(config['BOT_NAME'])
+    await ctx.channel.send(maint_msg)
+
 #Scheduled tasks
 @tasks.loop(hours=1.0)
 async def backup_data():
