@@ -122,6 +122,15 @@ def get_today_embed(user_prices):
         embed.add_field(name=user, value=user_price_string, inline=False)
     return embed
 
+def backup_data_helper():
+    backup_path = os.path.abspath(os.path.dirname(__file__))
+    backup_name = 'backup.json'
+    backup_fpath = os.path.join(backup_path, backup_name) 
+    logger.info('Backing up price_data to {}...'.format(backup_name))
+    with open(backup_fpath, 'w') as f:
+        json.dump(price_data, f)
+    logger.info('Backup complete.')
+
 #Discord client and events
 bot = commands.Bot(command_prefix='!')
 bot.remove_command("help")
@@ -244,17 +253,19 @@ async def maintenance(ctx):
     maint_msg = '{} is going offline for maintenance.'.format(config['BOT_NAME'])
     await ctx.channel.send(maint_msg)
 
+@bot.command()
+@commands.has_any_role(*config['PRIVILEGED_ROLES'])
+async def backup(ctx):
+    logger.info('Manual backup requested by {}'.format(ctx.author))
+    msg = 'Data backed up.'
+    backup_data_helper()
+    await ctx.channel.send(msg)
+
 #Scheduled tasks
 @tasks.loop(hours=1.0)
 async def backup_data():
     #backup price JSON every hour
-    backup_path = os.path.abspath(os.path.dirname(__file__))
-    backup_name = 'backup.json'
-    backup_fpath = os.path.join(backup_path, backup_name) 
-    logger.info('Backing up price_data to {}...'.format(backup_name))
-    with open(backup_fpath, 'w') as f:
-        json.dump(price_data, f)
-    logger.info('Backup complete.')
+    backup_data_helper()
 
 @backup_data.before_loop
 async def backup_data_before():
