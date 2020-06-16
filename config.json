@@ -2,6 +2,7 @@
     "BOT_NAME": "turnip-bot",
     "GUILD_NAME": "MyServer",
     "CHANNEL_NAME": "acnh-turnips",
+    "PRIVILEGED_ROLES": ["Owner"],
     "TIMEZONE": "America/Chicago",
     "ENABLE_SUNDAY_REMINDER": "False",
     "ENABLE_AM_REMINDER": "False",
